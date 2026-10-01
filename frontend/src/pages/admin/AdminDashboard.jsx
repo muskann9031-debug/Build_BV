@@ -11,36 +11,28 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useOrders } from "../../context/OrderContext";
-import { cafes, foods } from "../../data/mockData";
-
-const statusLabels = {
-  RECEIVED: "Received",
-  PREPARING: "Preparing",
-  READY: "Ready for pickup",
-  COLLECTED: "Collected",
-  EXPIRED: "Expired",
-};
+import { statusLabels } from "../../utils/orderRules";
 
 const statusStyles = {
   RECEIVED: "bg-blue-50 text-blue-700",
+  ACCEPTED: "bg-blue-50 text-blue-700",
   PREPARING: "bg-amber-50 text-amber-700",
   READY: "bg-green-50 text-green-700",
   COLLECTED: "bg-gray-100 text-gray-600",
-  EXPIRED: "bg-red-50 text-red-600",
 };
 
 const currency = (amount) => `₹${amount.toLocaleString("en-IN")}`;
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
-  const { orders } = useOrders();
+  const { orders, cafes, foods } = useOrders();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const [cafeId, setCafeId] = useState("ALL");
 
   const activeOrders = orders.filter(
-    (order) => !["COLLECTED", "EXPIRED"].includes(order.status)
+    (order) => order.status !== "COLLECTED"
   );
   const revenue = orders
     .filter((order) => order.status === "COLLECTED")
@@ -114,7 +106,7 @@ export default function AdminDashboard() {
             <StatCard icon={<Store />} label="Campus cafés" value={cafes.length} />
             <StatCard icon={<ClipboardList />} label="Total orders" value={orders.length} />
             <StatCard icon={<LayoutDashboard />} label="Active orders" value={activeOrders.length} />
-            <StatCard icon={<IndianRupee />} label="Collected revenue" value={currency(revenue)} />
+            <StatCard icon={<IndianRupee />} label="Collected order value" value={currency(revenue)} />
           </div>
 
           <section id="cafes" className="scroll-mt-5">

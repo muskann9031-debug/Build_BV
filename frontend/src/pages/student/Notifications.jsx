@@ -1,107 +1,13 @@
-import {
-  Bell,
-  CheckCircle,
-  ChefHat,
-  AlertTriangle,
-  XCircle,
-} from "lucide-react";
-
-import { notifications } from "../../data/mockData";
-
+import { Bell } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useOrders } from "../../context/OrderContext";
 export default function Notifications() {
+  const { notifications } = useOrders();
   return (
-    <div className="min-h-screen bg-[#f8faf9] p-5 lg:p-10">
-
-      <div className="max-w-4xl mx-auto">
-
-        <div className="flex items-center gap-3">
-
-          <Bell className="text-[#0f8f73]" />
-
-          <h1 className="text-4xl font-black">
-            Notifications
-          </h1>
-
-        </div>
-
-        <div className="space-y-4 mt-8">
-
-          {notifications.map(
-            (notification) => {
-
-              const config = {
-                accepted: {
-                  icon: CheckCircle,
-                  color: "text-green-500",
-                },
-                preparing: {
-                  icon: ChefHat,
-                  color: "text-orange-500",
-                },
-                ready: {
-                  icon: CheckCircle,
-                  color: "text-green-500",
-                },
-                expired: {
-                  icon: XCircle,
-                  color: "text-red-500",
-                },
-                warning: {
-                  icon: AlertTriangle,
-                  color: "text-amber-500",
-                },
-              };
-
-              const item =
-                config[notification.type] ||
-                config.accepted;
-
-              const Icon = item.icon;
-
-              return (
-                <div
-                  key={notification.id}
-                  className={`bg-white rounded-2xl p-5 shadow-card flex gap-4 ${
-                    !notification.read
-                      ? "border-l-4 border-[#0f8f73]"
-                      : ""
-                  }`}
-                >
-
-                  <Icon
-                    className={item.color}
-                    size={24}
-                  />
-
-                  <div className="flex-1">
-
-                    <div className="flex justify-between">
-
-                      <h3 className="font-black">
-                        {notification.title}
-                      </h3>
-
-                      <span className="text-xs text-gray-400">
-                        {notification.time}
-                      </span>
-
-                    </div>
-
-                    <p className="text-gray-500 mt-1">
-                      {notification.message}
-                    </p>
-
-                  </div>
-
-                </div>
-              );
-            }
-          )}
-
-        </div>
-
-      </div>
-
-    </div>
+    <main className="mx-auto min-h-screen max-w-4xl p-5 lg:p-10">
+      <Link to="/student" className="text-sm font-bold text-[#0f8f73]">← Back to dashboard</Link>
+      <h1 className="mt-5 flex items-center gap-3 text-3xl font-black"><Bell className="text-[#0f8f73]" /> Notifications</h1>
+      <div className="mt-8 space-y-4">{notifications.length === 0 ? <p className="rounded-2xl bg-white p-8 text-gray-500">Acceptance and ready-for-pickup notifications will appear here.</p> : notifications.map((notification) => <article key={notification.id} className="rounded-2xl border-l-4 border-[#0f8f73] bg-white p-5 shadow-card"><h2 className="font-black">{notification.title}</h2><p className="mt-2 text-gray-500">{notification.message}</p><p className="mt-2 text-xs text-gray-400">{new Date(notification.at).toLocaleString()}</p><Link to={`/student/orders/${notification.orderId}`} className="mt-4 inline-block font-bold text-[#0f8f73]">View order →</Link></article>)}</div>
+    </main>
   );
 }

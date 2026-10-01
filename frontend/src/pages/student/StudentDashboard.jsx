@@ -1,6 +1,5 @@
 import {
   Bell,
-  ChefHat,
   Clock3,
   Home,
   LogOut,
@@ -13,20 +12,21 @@ import {
 
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { cafes, foods } from "../../data/mockData";
+import { useState } from "react";
 import { useOrders } from "../../context/OrderContext";
 
 export default function StudentDashboard() {
   const { user, logout } = useAuth();
-  const { cart, orders, addToCart } = useOrders();
+  const { cart, orders, cafes, foods, notifications, addToCart, isFoodAvailable } = useOrders();
+  const [search, setSearch] = useState("");
+  const query = search.trim().toLowerCase();
+  const initials = user?.name?.split(" ").map((part) => part[0]).slice(0, 2).join("");
 
   const navigate = useNavigate();
 
   const activeOrder = orders.find(
     (order) =>
-      !["COLLECTED", "EXPIRED"].includes(
-        order.status
-      )
+      order.status !== "COLLECTED"
   );
 
   const handleLogout = () => {
@@ -61,7 +61,7 @@ export default function StudentDashboard() {
           />
 
           <SidebarLink
-            to="/student/cafe/central"
+            to="/student#cafes"
             icon={<Utensils size={18} />}
             text="Cafés"
           />
@@ -112,7 +112,10 @@ export default function StudentDashboard() {
             />
 
             <input
-              placeholder="Search food or cafés..."
+              aria-label="Search food or canteens"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search food or canteens..."
               className="w-full bg-gray-50 rounded-xl py-3 pl-11 pr-4 outline-none"
             />
 
@@ -127,7 +130,7 @@ export default function StudentDashboard() {
               <Bell size={22} />
 
               <span className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
-                2
+                {notifications.length}
               </span>
             </Link>
 
@@ -147,7 +150,7 @@ export default function StudentDashboard() {
             <div className="flex items-center gap-3">
 
               <div className="w-10 h-10 rounded-full bg-[#d9f4ec] text-[#075d50] flex items-center justify-center font-bold">
-                TV
+                {initials}
               </div>
 
               <div className="hidden md:block">
@@ -156,11 +159,19 @@ export default function StudentDashboard() {
                 </p>
 
                 <p className="text-xs text-gray-500">
-                  {user?.course} • {user?.year}
+                  {user?.email}
                 </p>
               </div>
 
             </div>
+
+            <button
+              onClick={handleLogout}
+              aria-label="Logout"
+              className="rounded-lg border border-gray-200 p-2 lg:hidden"
+            >
+              <LogOut size={18} />
+            </button>
 
           </div>
 
@@ -254,14 +265,14 @@ export default function StudentDashboard() {
           {/* CAFES */}
 
           <SectionHeader
-            title="Campus Cafés"
+            title="Banasthali Canteens"
             action="View all"
-            link="/student/cafe/central"
+            link="/student#cafes"
           />
 
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-12">
+          <div id="cafes" className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-12 scroll-mt-5">
 
-            {cafes.map((cafe) => (
+            {cafes.filter((cafe) => !query || cafe.name.toLowerCase().includes(query) || foods.some((food) => food.cafeId === cafe.id && food.name.toLowerCase().includes(query))).map((cafe) => (
               <div
                 key={cafe.id}
                 className="bg-white rounded-2xl overflow-hidden shadow-card"
@@ -318,14 +329,14 @@ export default function StudentDashboard() {
           {/* POPULAR */}
 
           <SectionHeader
-            title="Popular Food"
+            title="Sample menu highlights"
             action="Browse cafés"
-            link="/student/cafe/central"
+            link="/student#cafes"
           />
 
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5 pb-20">
 
-            {foods.map((food) => (
+            {foods.filter((food) => query ? food.name.toLowerCase().includes(query) || cafes.find((cafe) => cafe.id === food.cafeId)?.name.toLowerCase().includes(query) : food.id.endsWith("-maggi")).map((food) => (
               <div
                 key={food.id}
                 className="bg-white rounded-2xl overflow-hidden shadow-card"
@@ -342,17 +353,17 @@ export default function StudentDashboard() {
                     {food.name}
                   </h3>
 
+                  <p className="mt-1 text-xs text-gray-500">{cafes.find((cafe) => cafe.id === food.cafeId)?.name}</p>
                   <p className="text-[#0f8f73] font-black mt-2">
                     ₹{food.price}
                   </p>
 
                   <button
-                    onClick={() =>
-                      addToCart(food)
-                    }
+                    disabled={!isFoodAvailable(food)}
+                    onClick={() => addToCart(food)}
                     className="w-full mt-3 border border-[#0f8f73] text-[#0f8f73] rounded-lg py-2 text-sm font-bold hover:bg-[#0f8f73] hover:text-white"
                   >
-                    Add
+                    {isFoodAvailable(food) ? "Add" : "Unavailable"}
                   </button>
 
                 </div>
@@ -377,7 +388,7 @@ export default function StudentDashboard() {
         />
 
         <MobileLink
-          to="/student/cafe/central"
+          to="/student#cafes"
           icon={<Utensils size={19} />}
           text="Cafés"
         />
@@ -412,6 +423,13 @@ function SidebarLink({
   text,
   active,
 }) {
+  if (to.includes("#")) {
+    return (
+      <a href={to} className="flex items-center gap-3 rounded-xl px-4 py-3 text-white/70 hover:bg-white/10 hover:text-white">
+        {icon}<span className="font-semibold">{text}</span>
+      </a>
+    );
+  }
   return (
     <Link
       to={to}
@@ -430,6 +448,9 @@ function SidebarLink({
 }
 
 function MobileLink({ to, icon, text }) {
+  if (to.includes("#")) {
+    return <a href={to} className="flex flex-col items-center gap-1 text-xs text-gray-500">{icon}{text}</a>;
+  }
   return (
     <Link
       to={to}
@@ -453,12 +474,12 @@ function SectionHeader({
         {title}
       </h2>
 
-      <Link
-        to={link}
+      <a
+        href={link}
         className="text-[#0f8f73] font-bold text-sm"
       >
         {action} →
-      </Link>
+      </a>
 
     </div>
   );

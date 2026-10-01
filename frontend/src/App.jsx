@@ -6,9 +6,11 @@ import {
   Routes,
 } from "react-router-dom";
 
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { OrderProvider } from "./context/OrderContext";
 import CanteenDashboard from "./pages/canteen/CanteenDashboard.jsx";
+import CanteenOrders from "./pages/canteen/CanteenOrders.jsx";
+import CanteenOrderDetails from "./pages/canteen/CanteenOrderDetails.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import Login from "./pages/Login";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -22,9 +24,7 @@ import Notifications from "./pages/student/Notifications";
 import Profile from "./pages/student/Profile";
 
 function ProtectedRoute({ role, children }) {
-  const user = JSON.parse(
-    localStorage.getItem("campusEatsUser")
-  );
+  const { user } = useAuth();
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -156,6 +156,9 @@ function App() {
             />
 
             {/* ADMIN */}
+
+            <Route path="/canteen/orders" element={<ProtectedRoute role="canteen"><CanteenOrders /></ProtectedRoute>} />
+            <Route path="/canteen/orders/:orderId" element={<ProtectedRoute role="canteen"><CanteenOrderDetails /></ProtectedRoute>} />
 
             <Route
               path="/admin/*"

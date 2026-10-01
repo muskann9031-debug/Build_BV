@@ -1,178 +1,169 @@
-# CampusEats Architecture
+# Build BV — CampusEats architecture
 
-## 1. System Architecture
+## Implemented system
 
-``` mermaid
+```mermaid
 flowchart TD
-    A[CampusEats] --> B[Student]
-    A --> C[Canteen]
-    B --> D[Student Login<br/>Gmail: @banasthali.in]
-    C --> E[Canteen Login<br/>Email + Selected Canteen + Secret Code]
-    D --> F[Student Home]
-    E --> G[Canteen Dashboard]
+    UI[React + Vite frontend] --> Auth[AuthContext]
+    UI --> Orders[OrderContext]
+    Auth --> Session[sessionStorage: login per tab]
+    Auth --> Accounts[localStorage: student accounts]
+    Auth --> Codes[Temporary name-based canteen codes]
+    Orders --> Rules[Pure cart and order rules]
+    Orders --> Storage[localStorage: carts, orders, availability]
+    Storage --> Sync[storage events: update other tabs]
+    Orders --> Student[Student pages and notifications]
+    Orders --> Canteen[Canteen orders, availability, pickup verification]
+    Orders --> Admin[Campus-wide admin overview]
 ```
 
-## 2. Student Workflow
+This repository currently has no backend API or database. Browser storage provides a same-browser test application. It does not provide production authentication, secure canteen membership, cross-device delivery, transactional updates, or payment processing. Simultaneous writes from multiple tabs use browser storage and can overwrite each other; a backend must provide transactional updates for production.
 
-``` mermaid
-flowchart TD
-    A[Login] --> B[Select Canteen]
-    B --> C[Browse Menu]
-    C --> D[Add Items to Cart]
-    D --> E[Select Pickup Time]
-    E --> F[Place Order]
-    F --> G[Complete Payment]
-    G --> H[Generate 3-Character Alphanumeric Order ID]
-    H --> I[Order Confirmation]
-    I --> J[Wait for Canteen]
-    J --> K[Receive READY Notification]
-    K --> L[Go to Canteen]
-    L --> M[Show Order ID]
-    M --> N[Order ID Verified by Canteen]
-    N --> O[Pick Up Order]
-```
+## Actual source structure
 
-### Student-side rules
-
--   Students sign in using their `@banasthali.in` Gmail address.
--   A cart can contain items from **one canteen only** at a time.
--   The student selects an estimated pickup time before placing the
-    order.
--   Payment must be verified before the order appears on the canteen
-    dashboard.
--   After successful payment, the system generates a 3-character
-    alphanumeric Order ID (for example, `AZ1` or `B7J`).
--   The student receives a notification when the order is ready and
-    shows the Order ID at pickup.
-
-## 3. Canteen Workflow
-
-``` mermaid
-flowchart TD
-    A[Canteen Login] --> B[Select / Confirm Canteen]
-    B --> C[Enter Canteen Secret Code]
-    C --> D[Canteen Dashboard]
-    D --> E[Incoming Orders]
-    E --> F{Accept or Reject?}
-    F -->|Accept| G[Accepted]
-    G --> H[Preparing]
-    H --> I[Ready]
-    I --> J[Notify Student]
-    J --> K[Student Arrives]
-    K --> L[Verify Order ID]
-    L --> M[Picked Up]
-    F -->|Reject| N[Order Rejected]
-    N --> O[Initiate Refund]
-```
-
-### Canteen-side rules
-
--   Canteen members select the canteen they represent and use its secret
-    code to access its dashboard.
--   Incoming orders are displayed only after payment verification.
--   The dashboard order card displays the Order ID and ordered items.
--   Canteen members can accept or reject an incoming order.
--   Accepted orders move through **Accepted → Preparing → Ready → Picked
-    Up**.
--   The canteen notifies the student when an order is ready and verifies
-    the Order ID at pickup.
--   If an order is rejected, a refund is initiated. Accepted orders
-    cannot be cancelled or refunded.
--   Canteen members can pause incoming orders and disable individual
-    menu items.
-
-## 4. Order Status Flow
-
-``` mermaid
-stateDiagram-v2
-    [*] --> PaymentPending
-    PaymentPending --> PaymentVerified: Payment successful
-    PaymentVerified --> AwaitingCanteenDecision: Order appears on dashboard
-    AwaitingCanteenDecision --> Accepted: Canteen accepts
-    AwaitingCanteenDecision --> Rejected: Canteen rejects
-    Accepted --> Preparing
-    Preparing --> Ready
-    Ready --> PickedUp: Order ID verified
-    Rejected --> RefundInitiated
-    PickedUp --> [*]
-    RefundInitiated --> [*]
-```
-
-## 5. Project Directory Structure
-
-``` text
-CampusEats/
-├── backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── core/ (config.py, security.py, constants.py)
-│   │   ├── database/
-│   │   │   ├── database.py
-│   │   │   ├── models/ (user.py, canteen.py, menu_item.py, order.py, order_item.py)
-│   │   │   └── migrations/
-│   │   ├── schemas/ (auth.py, user.py, canteen.py, menu.py, order.py)
-│   │   ├── api/ (auth.py, canteens.py, menu.py, orders.py)
-│   │   ├── services/ (auth_service.py, canteen_service.py, menu_service.py, order_service.py, order_id_service.py)
-│   │   ├── repositories/ (user_repository.py, canteen_repository.py, menu_repository.py, order_repository.py)
-│   │   ├── seed/ (canteens.py, menu.py)
-│   │   └── utils/ (validators.py, order_status.py)
-│   ├── tests/ (test_auth.py, test_canteens.py, test_menu.py, test_orders.py)
-│   ├── alembic.ini
-│   ├── pyproject.toml
-│   ├── .env
-│   └── README.md
-├── frontend/
-│   ├── public/assets/
-│   ├── src/
-│   │   ├── assets/
-│   │   ├── components/ (Navbar.jsx, Footer.jsx, CanteenCard.jsx, MenuItemCard.jsx, CartItem.jsx, OrderCard.jsx, OrderStatus.jsx, PickupTimeSelector.jsx, ProtectedRoute.jsx)
-│   │   ├── pages/
-│   │   │   ├── auth/ (Login.jsx, StudentLogin.jsx, CanteenLogin.jsx)
-│   │   │   ├── student/ (Home.jsx, Canteens.jsx, CanteenMenu.jsx, Cart.jsx, Checkout.jsx, OrderConfirmation.jsx, MyOrders.jsx)
-│   │   │   └── canteen/ (Dashboard.jsx, Orders.jsx, OrderDetails.jsx, MenuManagement.jsx, CanteenSettings.jsx, PickupVerification.jsx)
-│   │   ├── context/ (AuthContext.jsx, CartContext.jsx)
-│   │   ├── services/ (api.js, authApi.js, canteenApi.js, menuApi.js, orderApi.js)
-│   │   ├── hooks/ (useAuth.js, useCart.js, useOrders.js)
-│   │   ├── utils/ (constants.js, validators.js, orderStatus.js)
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── package.json
-│   ├── vite.config.js
-│   └── README.md
-├── docs/
-│   ├── requirements.md
-│   ├── architecture.md
-│   ├── authentication.md
-│   ├── order-flow.md
-│   └── canteen-management.md
-├── .gitignore
+```text
+Build_BV/
 ├── README.md
-└── AGENTS.md
+├── architecture.md
+└── frontend/
+    ├── package.json
+    ├── vite.config.js
+    ├── README.md
+    ├── tests/orderRules.test.js
+    └── src/
+        ├── App.jsx
+        ├── main.jsx
+        ├── index.css
+        ├── context/
+        │   ├── AuthContext.jsx
+        │   └── OrderContext.jsx
+        ├── hooks/usePersistentState.js
+        ├── utils/
+        │   ├── authRules.js
+        │   └── orderRules.js
+        ├── data/
+        │   ├── mockData.js
+        │   └── canteenAccess.js
+        └── pages/
+            ├── Login.jsx
+            ├── student/
+            │   ├── StudentDashboard.jsx
+            │   ├── CafePage.jsx
+            │   ├── Cart.jsx
+            │   ├── Checkout.jsx
+            │   ├── OrderSuccess.jsx
+            │   ├── MyOrders.jsx
+            │   ├── OrderTracking.jsx
+            │   ├── Notifications.jsx
+            │   └── Profile.jsx
+            ├── canteen/
+            │   ├── CanteenDashboard.jsx
+            │   ├── CanteenOrders.jsx
+            │   ├── CanteenOrderDetails.jsx
+            │   └── (unused screen stubs)
+            └── admin/AdminDashboard.jsx
 ```
 
-## 6. Main Components
+## Routes and ownership
 
-  -----------------------------------------------------------------------
-  Layer                               Responsibility
-  ----------------------------------- -----------------------------------
-  Frontend                            Student and canteen interfaces,
-                                      menu browsing, cart, checkout,
-                                      order tracking, and pickup
-                                      verification
+| Route | Role | Behavior |
+| --- | --- | --- |
+| `/login` | Public | Student signup/email login, canteen membership login, admin login |
+| `/student` | Student | Search the eight canteens and sample menus; view own active order |
+| `/student/cafe/:cafeId` | Student | Browse one canteen's menu and availability |
+| `/student/cart` | Student | Own single-canteen cart, quantities, removal, empty cart |
+| `/student/checkout` | Student | Estimated pickup selection and test order submission |
+| `/student/order-success?id=:id` | Student | Own submitted order and test ID |
+| `/student/orders` | Student | Own active/completed orders |
+| `/student/orders/:orderId` | Student | Own order progress |
+| `/student/notifications` | Student | Own acceptance and readiness events |
+| `/student/profile` | Student | Registered name and institutional email |
+| `/canteen` | Canteen | Selected canteen's queue, acceptance, preparation, ready notification, availability, pickup |
+| `/canteen/orders` | Canteen | Selected canteen's order history |
+| `/canteen/orders/:orderId` | Canteen | Details and permitted status action for own order |
+| `/admin/*` | Admin | Campus-wide overview and searchable orders |
 
-  Backend API                         Authentication, canteen and menu
-                                      data, order creation, status
-                                      updates, and order ID generation
+`ProtectedRoute` reads the active auth context. `OrderContext` exposes only the student's orders/cart, the selected canteen's orders, or all orders for admin. Domain transition rules check staff role and canteen ownership again. Client-side checks are prototype behavior; the future API must repeat authorization for each request.
 
-  Database                            Stores users, canteens, menu items,
-                                      orders, and order items
+## Authentication
 
-  Services                            Implements authentication, canteen,
-                                      menu, order, and order-ID logic
+Student signup validates the exact `@banasthali.in` domain and a nonempty name, then saves a local account keyed by normalized email. Student login retrieves that registered account using email only. No password or role-only bypass exists for students. Email ownership is not yet verified; add an email-based verification/session flow on the backend without adding a student password requirement.
 
-  Repositories                        Handles database access
+Canteen login requires a valid member email, selected canteen, and its matching code. The eight names are Mukteshwari's Canteen, Shanu's Canteen, Spicy Bites, Annapurna Canteen, Agarwal Canteen, Fun 'N' Frolic, Desi Jayka, and Bella Bite. Each current test code is exactly its canteen name. `canteenAccess.js` isolates this temporary mapping. Future manually supplied codes belong in the database, stored as hashes and checked by the backend; they must not be sent to clients.
 
-  Tests                               Tests authentication, canteen,
-                                      menu, and order behavior
-  -----------------------------------------------------------------------
+Admin uses the existing demo email/password. Login is per-tab in `sessionStorage`, allowing separate student, canteen, and admin test tabs. The old demo login key is ignored.
+
+## Storage model
+
+| Key | Store | Contents |
+| --- | --- | --- |
+| `campusEatsSessionV2` | sessionStorage | Current tab's `{role, email, name, cafeId?}` or null |
+| `campusEatsStudentsV2` | localStorage | Registered student profiles keyed by normalized email |
+| `campusEatsCartsV2` | localStorage | Cart item arrays keyed by student email |
+| `campusEatsOrdersV2` | localStorage | All test orders |
+| `campusEatsAvailabilityV2` | localStorage | `{pausedCafes: [...ids], disabledFoods: [...ids]}` |
+
+Versioned keys avoid interpreting legacy unowned demo orders as orders from the new account system. Existing old storage is not deleted. The persistence hook subscribes to browser storage events for other tabs and a custom event for same-tab writes. Mutation callbacks read the current stored value. Checkout reads current availability and cart data before building an order.
+
+An order stores:
+
+- `id`: three uppercase alphanumeric characters, unique across stored test orders.
+- `studentEmail`, `studentName`: the placing student's account.
+- `cafeId`, `cafeName`: the cart's canteen.
+- `items`: snapshot of food ID, name, quantity, and current menu price.
+- `total`: sum of current unit prices multiplied by quantities.
+- `pickupAt`: ISO timestamp chosen relative to submission; `pickupTime`: display time.
+- `createdAt`, `status`, `history`: creation and status change timestamps.
+- `paymentStatus: NOT_REQUIRED_TEST`: no charge or simulated payment success.
+- `pickupVerifiedBy`, `collectedAt`: added only after canteen verification.
+
+`mockData.js` contains eight confirmed names and sample menus. Menu IDs are scoped to canteens. Exact locations, hours, menus, and prices await real canteen data.
+
+## Student and canteen flow in testing
+
+```mermaid
+sequenceDiagram
+    participant S as Student
+    participant O as Shared order storage
+    participant C as Selected canteen
+    S->>O: Submit own single-canteen cart + estimated pickup
+    O-->>S: RECEIVED order + 3-character test ID
+    O-->>C: Order ID, items, quantities, pickup, total
+    C->>O: Accept: ACCEPTED
+    O-->>S: Acceptance notification
+    C->>O: Start preparation: PREPARING
+    C->>O: Mark prepared: READY
+    O-->>S: Ready notification and tracking update
+    S->>C: Show order ID at pickup
+    C->>O: Verify matching ID: COLLECTED
+    O-->>S: Pickup confirmed
+```
+
+Allowed state progression is `RECEIVED → ACCEPTED → PREPARING → READY → COLLECTED`. Staff cannot skip states, reverse collection, or act for another canteen. Collection requires a matching ID on a ready order. No cancellation, rejection/refund, or automatic expiry state is implemented. A student's estimate does not invalidate an uncollected order.
+
+Notifications are derived from persisted `ACCEPTED` and `READY` history events. They appear in-app and update other same-origin tabs. There is no email, push, or background notification service yet.
+
+Availability is independent of order state. A canteen may pause all incoming orders or disable an individual menu item. These changes block new additions, quantity increases, and checkout; existing orders retain item snapshots and continue fulfillment. Cross-canteen cart additions are blocked without silently clearing the student's cart.
+
+## Future backend and payment design
+
+The future database should store users, canteens, member access code hashes, menu items and availability, orders, order items, and timestamped status events. Authorized operators will manually provision canteen codes in that database. The frontend will submit canteen selection and entered code to an authenticated membership endpoint instead of importing the mapping.
+
+Backend order creation must validate ownership, one-canteen carts, availability, quantities, prices, and pickup time in a transaction. It must atomically reserve order IDs and enforce state transitions and pickup verification. Browser persistence can then be replaced with API calls and a server event or polling subscription.
+
+```mermaid
+flowchart TD
+    A[Submit order with internal reference] --> B[Canteen accepts]
+    B --> C[Offer payment]
+    C --> D[Backend verifies successful payment]
+    D --> E[Generate public 3-character order ID]
+    E --> F[Prepare food]
+    F --> G[Ready / notify student]
+    G --> H[Canteen verifies pickup]
+```
+
+Payment occurs only after acceptance. Preparation in the paid release is gated on verified payment, and the public ID is generated only after payment succeeds. The internal order reference must remain separate from the short pickup ID. No cancellation or refund flow is part of the specified product. This is a future design; the current frontend skips payment and generates the ID at test submission.
+
+## Verification
+
+`npm run test` runs Node tests for domain validation, signup/email-only login, membership codes, all eight canteens, single-canteen carts, availability checks, current-price totals, future pickup times, order IDs/collisions, ownership, valid transitions, and pickup verification. `npm run lint` checks frontend sources, and `npm run build` checks the complete module graph and production bundle.

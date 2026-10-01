@@ -16,6 +16,8 @@ import {
 export default function Cart() {
   const {
     cart,
+    cafes,
+    clearCart,
     updateQuantity,
     removeFromCart,
   } = useOrders();
@@ -77,9 +79,10 @@ export default function Cart() {
         <h1 className="text-4xl font-black">
           Your Cart
         </h1>
+        <button onClick={clearCart} className="mt-3 text-sm font-bold text-red-600">Empty cart</button>
 
         <p className="text-gray-500 mt-2">
-          Central Café
+          {cafes.find((cafe) => cafe.id === cart[0]?.cafeId)?.name}
         </p>
 
         <div className="grid lg:grid-cols-[1fr_350px] gap-8 mt-8">
@@ -169,8 +172,8 @@ export default function Cart() {
             </div>
 
             <div className="flex justify-between mt-3">
-              <span>Preparation</span>
-              <span>10 min</span>
+              <span>Pickup</span>
+              <span>Choose at checkout</span>
             </div>
 
             <hr className="my-5" />

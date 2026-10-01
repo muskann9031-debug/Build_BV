@@ -1,16 +1,24 @@
-# React + Vite
+# CampusEats frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React/Vite frontend for Build BV, with student, canteen, and admin routes.
 
-Currently, two official plugins are available:
+```bash
+npm install
+npm run dev
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Checks:
 
-## React Compiler
+```bash
+npm run test
+npm run lint
+npm run build
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Students sign up with a name and `@banasthali.in` email, then log in using only the registered email. Canteen members enter their email, select a canteen, and enter its access code. Each current test code is exactly its canteen name, including Bella Bite. Admin demo credentials are `admin@campuseats.com` / `admin123`.
 
-## Expanding the ESLint configuration
+Single-canteen carts, staff/item availability, estimated pickup, acceptance, preparation, readiness alerts, and staff order-ID verification are implemented with browser storage. Payment is skipped for testing and the three-character ID is generated at submission. Sessions are per-tab; data updates synchronize tabs on the same browser/origin. Menu items are sample data.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Frontend authentication and name-based codes are for testing. Database-managed codes, verified email sessions, cross-device storage, and payment after acceptance require a backend.
+
+See the [project README](../README.md) and [architecture](../architecture.md) for the directory, rules, storage design, and future payment sequence.

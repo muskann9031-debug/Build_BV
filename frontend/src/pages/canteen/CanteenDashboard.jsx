@@ -1,523 +1,64 @@
-import {
-  LayoutDashboard,
-  ClipboardList,
-  Utensils,
-  BarChart3,
-  Settings,
-  LogOut,
-  Clock,
-  ChefHat,
-  CheckCircle,
-  IndianRupee,
-} from "lucide-react";
-
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ClipboardList, LogOut, Store } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useOrders } from "../../context/OrderContext";
+import { statusLabels } from "../../utils/orderRules";
 
 export default function CanteenDashboard() {
-  const { logout } = useAuth();
-  const { orders, updateOrderStatus } = useOrders();
+  const { user, logout } = useAuth();
+  const { orders, cafes, foods, availability, toggleOrders, toggleFood } = useOrders();
   const navigate = useNavigate();
-
-  // Only active orders
-  const activeOrders = orders
-    .filter(
-      (order) =>
-        !["COLLECTED", "EXPIRED"].includes(order.status)
-    )
-    .sort((a, b) => {
-      return (
-        new Date(`1970/01/01 ${a.pickupTime}`) -
-        new Date(`1970/01/01 ${b.pickupTime}`)
-      );
-    });
-
-  const preparing = orders.filter(
-    (order) => order.status === "PREPARING"
-  ).length;
-
-  const ready = orders.filter(
-    (order) => order.status === "READY"
-  ).length;
-
-  const completed = orders.filter(
-    (order) => order.status === "COLLECTED"
-  ).length;
-
-  const revenue = orders
-    .filter((order) => order.status === "COLLECTED")
-    .reduce((sum, order) => sum + order.total, 0);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
+  const cafe = cafes.find((item) => item.id === user.cafeId);
+  const ownFoods = foods.filter((food) => food.cafeId === user.cafeId);
+  const active = orders.filter((order) => order.status !== "COLLECTED")
+    .sort((a, b) => new Date(a.pickupAt) - new Date(b.pickupAt));
+  const [error, setError] = useState("");
+  const perform = (action) => { try { action(); setError(""); } catch (issue) { setError(issue.message); } };
+  const handleLogout = () => { logout(); navigate("/login", { replace: true }); };
   return (
     <div className="min-h-screen bg-[#f6f8f7]">
-
-      {/* SIDEBAR */}
-
-      <aside className="fixed left-0 top-0 bottom-0 hidden lg:flex w-64 bg-[#075d50] text-white p-6 flex-col">
-
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 rounded-xl bg-[#facc15] text-[#075d50] flex items-center justify-center font-black">
-            CE
-          </div>
-
-          <div>
-            <p className="font-black text-xl">
-              Campus<span className="text-[#facc15]">Eats</span>
-            </p>
-
-            <p className="text-xs text-white/50">
-              Canteen
-            </p>
-          </div>
-        </div>
-
-        <nav className="space-y-2">
-
-          <SidebarItem
-            icon={<LayoutDashboard size={18} />}
-            text="Dashboard"
-            to="/canteen"
-            active
-          />
-
-          <SidebarItem
-            icon={<ClipboardList size={18} />}
-            text="Orders"
-            to="/canteen/orders"
-          />
-
-          <SidebarItem
-            icon={<Utensils size={18} />}
-            text="Menu"
-            to="/canteen/menu"
-          />
-
-          <SidebarItem
-            icon={<BarChart3 size={18} />}
-            text="Analytics"
-            to="/canteen/analytics"
-          />
-
-          <SidebarItem
-            icon={<Settings size={18} />}
-            text="Settings"
-            to="/canteen/settings"
-          />
-
-        </nav>
-
-        <button
-          onClick={handleLogout}
-          className="mt-auto flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10"
-        >
-          <LogOut size={18} />
-          Logout
-        </button>
-
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-[#075d50] p-6 text-white lg:flex">
+        <p className="text-2xl font-black">Campus<span className="text-[#facc15]">Eats</span></p><p className="mt-2 text-sm text-white/60">Canteen management</p>
+        <nav className="mt-10 space-y-3" aria-label="Canteen navigation"><Link to="/canteen" className="block rounded-xl bg-white px-4 py-3 font-bold text-[#075d50]">Dashboard</Link><Link to="/canteen/orders" className="block px-4 py-3">All orders</Link><a href="#menu" className="block px-4 py-3">Menu availability</a></nav>
+        <button onClick={handleLogout} className="mt-auto flex items-center gap-2 px-4 py-3"><LogOut size={18} /> Logout</button>
       </aside>
-
-      {/* MAIN */}
-
       <main className="lg:ml-64">
-
-        {/* HEADER */}
-
-        <header className="bg-white border-b border-gray-100 px-6 lg:px-10 py-5">
-
-          <p className="text-sm font-bold text-[#0f8f73]">
-            CENTRAL CAFÉ
-          </p>
-
-          <div className="flex justify-between items-end">
-
-            <div>
-              <h1 className="text-3xl font-black">
-                Café Management
-              </h1>
-
-              <p className="text-gray-500 mt-1">
-                Manage incoming orders and pickup priority.
-              </p>
-            </div>
-
-            <span className="hidden sm:block bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-bold">
-              ● Café Open
-            </span>
-
-          </div>
-
-        </header>
-
-        <div className="max-w-7xl mx-auto p-5 lg:p-10">
-
-          {/* STAT CARDS */}
-
-          <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
-
-            <StatCard
-              icon={<ClipboardList />}
-              label="Today's Orders"
-              value={orders.length}
-            />
-
-            <StatCard
-              icon={<ChefHat />}
-              label="Preparing"
-              value={preparing}
-            />
-
-            <StatCard
-              icon={<Clock />}
-              label="Ready"
-              value={ready}
-            />
-
-            <StatCard
-              icon={<CheckCircle />}
-              label="Completed"
-              value={completed}
-            />
-
-            <StatCard
-              icon={<IndianRupee />}
-              label="Revenue"
-              value={`₹${revenue}`}
-            />
-
-          </div>
-
-          {/* PRIORITY QUEUE */}
-
-          <section className="mt-10">
-
-            <div className="flex justify-between items-end">
-
-              <div>
-                <p className="text-[#f59e0b] font-bold text-sm">
-                  LIVE QUEUE
-                </p>
-
-                <h2 className="text-3xl font-black mt-1">
-                  Smart Order Priority
-                </h2>
-
-                <p className="text-gray-500 mt-2">
-                  Orders are sorted according to the
-                  customer's selected arrival time.
-                </p>
-              </div>
-
-              <Link
-                to="/canteen/orders"
-                className="hidden sm:block text-[#0f8f73] font-bold"
-              >
-                View all orders →
-              </Link>
-
-            </div>
-
-            {/* Priority explanation */}
-
-            <div className="mt-5 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
-
-              <p className="font-bold text-amber-800">
-                Earlier pickup time = Higher priority
-              </p>
-
-              <p className="text-sm text-amber-700 mt-1">
-                Prepare the earliest-arriving active order first.
-              </p>
-
-            </div>
-
-            {/* ORDERS */}
-
-            <div className="space-y-4 mt-6">
-
-              {activeOrders.length === 0 ? (
-
-                <div className="bg-white rounded-2xl p-12 text-center shadow-sm">
-
-                  <ClipboardList
-                    size={40}
-                    className="mx-auto text-gray-300"
-                  />
-
-                  <h3 className="text-xl font-black mt-4">
-                    No pending orders
-                  </h3>
-
-                  <p className="text-gray-500 mt-2">
-                    New orders will appear here.
-                  </p>
-
-                </div>
-
-              ) : (
-
-                activeOrders.map((order, index) => (
-
-                  <PriorityOrderCard
-                    key={order.id}
-                    order={order}
-                    priority={index + 1}
-                    updateOrderStatus={updateOrderStatus}
-                  />
-
-                ))
-
-              )}
-
-            </div>
-
-          </section>
-
+        <header className="border-b border-gray-100 bg-white p-5 lg:px-10"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm font-bold text-[#0f8f73]">CANTEEN DASHBOARD</p><h1 className="mt-2 text-3xl font-black">{cafe?.name}</h1><p className="mt-2 text-gray-500">Review incoming orders and verify student pickup.</p></div><button onClick={handleLogout} className="rounded-xl border px-4 py-2 lg:hidden">Logout</button></div><nav className="mt-4 flex gap-5 text-sm font-bold text-[#075d50] lg:hidden"><Link to="/canteen/orders">All orders</Link><a href="#menu">Menu availability</a></nav></header>
+        <div className="mx-auto max-w-7xl space-y-8 p-5 lg:p-10">
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-6 shadow-sm"><div><h2 className="flex items-center gap-2 text-xl font-black"><Store size={20} /> Incoming orders</h2><p className="mt-2 text-gray-500">{cafe?.status === "Paused" ? "New orders are paused. Continue fulfilling existing orders." : "Your canteen is accepting new orders."}</p></div><button onClick={() => perform(toggleOrders)} className="rounded-xl bg-[#075d50] px-5 py-3 font-bold text-white">{cafe?.status === "Paused" ? "Resume orders" : "Pause incoming orders"}</button></section>
+          {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-700">{error}</p>}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{[
+            ["Awaiting acceptance", orders.filter((order) => order.status === "RECEIVED").length],
+            ["Preparing", orders.filter((order) => ["ACCEPTED", "PREPARING"].includes(order.status)).length],
+            ["Ready for pickup", orders.filter((order) => order.status === "READY").length],
+            ["Collected", orders.filter((order) => order.status === "COLLECTED").length],
+          ].map(([label, value]) => <div key={label} className="rounded-2xl bg-white p-5 shadow-sm"><p className="text-sm text-gray-500">{label}</p><p className="mt-2 text-3xl font-black">{value}</p></div>)}</div>
+          <section><h2 className="text-2xl font-black">Active orders</h2><p className="mt-2 text-gray-500">Sorted by the student's estimated pickup time.</p><div className="mt-5 space-y-4">{active.length === 0 ? <div className="rounded-2xl bg-white p-10 text-center"><ClipboardList className="mx-auto text-gray-300" size={36} /><p className="mt-4 font-bold">No active orders</p></div> : active.map((order) => <CanteenOrderCard key={order.id} order={order} />)}</div></section>
+          <section id="menu" className="scroll-mt-5"><h2 className="text-2xl font-black">Menu availability</h2><p className="mt-2 text-gray-500">Pause individual items without changing existing orders.</p><div className="mt-5 grid gap-4 sm:grid-cols-2">{ownFoods.map((food) => {
+            const disabled = availability.disabledFoods.includes(food.id);
+            return <article key={food.id} className="flex items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm"><div><h3 className="font-black">{food.name}</h3><p className="mt-1 text-sm text-gray-500">₹{food.price} · {disabled ? "Unavailable" : "Available"}</p></div><button onClick={() => perform(() => toggleFood(food.id))} className="rounded-xl border border-[#0f8f73] px-4 py-2 text-sm font-bold text-[#075d50]">{disabled ? "Enable item" : "Pause item"}</button></article>;
+          })}</div></section>
         </div>
-
       </main>
-
     </div>
   );
 }
 
-
-/* ========================================
-   PRIORITY ORDER CARD
-======================================== */
-
-function PriorityOrderCard({
-  order,
-  priority,
-  updateOrderStatus,
-}) {
-  return (
-    <div className="bg-white rounded-2xl p-5 lg:p-6 shadow-sm border border-gray-100">
-
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-
-        <div className="flex gap-5">
-
-          {/* Priority */}
-
-          <div className="w-16 h-16 rounded-2xl bg-[#075d50] text-white flex flex-col items-center justify-center shrink-0">
-
-            <span className="text-[10px] uppercase text-white/60">
-              Priority
-            </span>
-
-            <span className="text-2xl font-black text-[#facc15]">
-              #{priority}
-            </span>
-
-          </div>
-
-          {/* Order */}
-
-          <div>
-
-            <div className="flex items-center gap-3">
-
-              <h3 className="text-2xl font-black tracking-wider">
-                {order.id}
-              </h3>
-
-              <StatusBadge status={order.status} />
-
-            </div>
-
-            <p className="text-gray-500 mt-2">
-              {order.items
-                .map(
-                  (item) =>
-                    `${item.name} × ${item.quantity}`
-                )
-                .join(" • ")}
-            </p>
-
-          </div>
-
-        </div>
-
-        {/* INFO */}
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 lg:gap-10">
-
-          <div>
-            <p className="text-xs text-gray-400 uppercase">
-              Pickup
-            </p>
-
-            <p className="font-black mt-1">
-              {order.pickupTime}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs text-gray-400 uppercase">
-              Total
-            </p>
-
-            <p className="font-black mt-1">
-              ₹{order.total}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs text-gray-400 uppercase">
-              Status
-            </p>
-
-            <p className="font-black mt-1">
-              {order.status}
-            </p>
-          </div>
-
-        </div>
-
-        {/* ACTION */}
-
-        <div>
-
-          {order.status === "RECEIVED" && (
-            <button
-              onClick={() =>
-                updateOrderStatus(
-                  order.id,
-                  "PREPARING"
-                )
-              }
-              className="bg-[#075d50] hover:bg-[#064e43] text-white px-5 py-3 rounded-xl font-bold"
-            >
-              Start Preparing
-            </button>
-          )}
-
-          {order.status === "PREPARING" && (
-            <button
-              onClick={() =>
-                updateOrderStatus(
-                  order.id,
-                  "READY"
-                )
-              }
-              className="bg-[#f59e0b] hover:bg-[#d98906] text-white px-5 py-3 rounded-xl font-bold"
-            >
-              Mark Ready
-            </button>
-          )}
-
-          {order.status === "READY" && (
-            <Link
-              to={`/canteen/orders/${order.id}`}
-              className="inline-block bg-green-600 text-white px-5 py-3 rounded-xl font-bold"
-            >
-              Verify Order
-            </Link>
-          )}
-
-        </div>
-
-      </div>
-
-    </div>
-  );
-}
-
-
-/* ========================================
-   STATUS
-======================================== */
-
-function StatusBadge({ status }) {
-  const styles = {
-    RECEIVED:
-      "bg-blue-50 text-blue-700",
-
-    PREPARING:
-      "bg-amber-50 text-amber-700",
-
-    READY:
-      "bg-green-50 text-green-700",
-
-    COLLECTED:
-      "bg-gray-100 text-gray-600",
-
-    EXPIRED:
-      "bg-red-50 text-red-600",
+export function CanteenOrderCard({ order }) {
+  const { updateOrderStatus } = useOrders();
+  const [pickupCode, setPickupCode] = useState("");
+  const [error, setError] = useState("");
+  const next = { RECEIVED: ["ACCEPTED", "Accept order"], ACCEPTED: ["PREPARING", "Start preparing"], PREPARING: ["READY", "Mark ready & notify student"] }[order.status];
+  const advance = (status) => {
+    try { updateOrderStatus(order.id, status, pickupCode); setError(""); }
+    catch (issue) { setError(issue.message); }
   };
-
-  return (
-    <span
-      className={`px-3 py-1 rounded-full text-xs font-bold ${
-        styles[status] || styles.RECEIVED
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
-
-
-/* ========================================
-   STAT CARD
-======================================== */
-
-function StatCard({
-  icon,
-  label,
-  value,
-}) {
-  return (
-    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-
-      <div className="text-[#0f8f73]">
-        {icon}
-      </div>
-
-      <p className="text-gray-500 text-sm mt-4">
-        {label}
-      </p>
-
-      <p className="text-2xl font-black mt-1">
-        {value}
-      </p>
-
-    </div>
-  );
-}
-
-
-/* ========================================
-   SIDEBAR
-======================================== */
-
-function SidebarItem({
-  icon,
-  text,
-  to,
-  active,
-}) {
-  return (
-    <Link
-      to={to}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
-        active
-          ? "bg-white text-[#075d50]"
-          : "text-white/70 hover:bg-white/10 hover:text-white"
-      }`}
-    >
-      {icon}
-
-      <span className="font-semibold">
-        {text}
-      </span>
-
-    </Link>
-  );
+  return <article className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+    <div className="flex flex-wrap items-start justify-between gap-5"><div><Link to={`/canteen/orders/${order.id}`} className="text-3xl font-black tracking-widest text-[#075d50]">{order.id}</Link><p className="mt-2 text-sm font-bold text-[#0f8f73]">{statusLabels[order.status]}</p><p className="mt-3 text-gray-600">{order.items.map((item) => `${item.name} × ${item.quantity}`).join(" · ")}</p><p className="mt-2 text-sm text-gray-500">{order.studentName} · Estimated pickup {order.pickupTime}</p><p className="mt-2 font-bold">Order value: ₹{order.total}</p></div><div>
+      {next && <button onClick={() => advance(next[0])} className="rounded-xl bg-[#075d50] px-5 py-3 font-bold text-white">{next[1]}</button>}
+      {order.status === "READY" && <form onSubmit={(event) => { event.preventDefault(); advance("COLLECTED"); }} className="flex max-w-xs flex-col gap-3"><label className="text-sm font-bold">Order ID shown by student<input required maxLength={3} value={pickupCode} onChange={(event) => setPickupCode(event.target.value.toUpperCase())} className="mt-2 w-full rounded-xl border px-4 py-2 uppercase" /></label><button className="rounded-xl bg-[#075d50] px-5 py-3 font-bold text-white">Verify pickup & mark collected</button></form>}
+      {order.status === "COLLECTED" && <p className="font-bold text-green-700">Pickup verified</p>}
+    </div></div>{error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
+  </article>;
 }

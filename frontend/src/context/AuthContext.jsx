@@ -1,69 +1,49 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState } from "react";
+import { cafes } from "../data/mockData";
+import { canteenAccessCodes } from "../data/canteenAccess";
+import { studentAccount, canteenMember } from "../utils/authRules";
+import { readStoredValue } from "../hooks/usePersistentState";
 
 const AuthContext = createContext();
-
-const demoUsers = {
-  student: {
-    email: "student@college.edu",
-    password: "student123",
-    name: "Tanu Verma",
-    role: "student",
-    course: "CSE",
-    year: "3rd Year",
-  },
-
-  canteen: {
-    email: "canteen@college.edu",
-    password: "canteen123",
-    name: "Central Café",
-    role: "canteen",
-  },
-
-  admin: {
-    email: "admin@campuseats.com",
-    password: "admin123",
-    name: "CampusEats Admin",
-    role: "admin",
-  },
-};
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("campusEatsUser");
-    return saved ? JSON.parse(saved) : null;
+  const [savedUser, setSavedUser] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem("campusEatsSessionV2")); }
+    catch { return null; }
   });
+  const setUser = (next) => {
+    sessionStorage.setItem("campusEatsSessionV2", JSON.stringify(next));
+    setSavedUser(next);
+  };
+  const user = savedUser && (
+    (savedUser.role === "student" && /^[^@\s]+@banasthali\.in$/.test(savedUser.email)) ||
+    (savedUser.role === "canteen" && cafes.some((cafe) => cafe.id === savedUser.cafeId)) ||
+    savedUser.role === "admin"
+  ) ? savedUser : null;
 
-  const login = (role) => {
-    const demoUser = demoUsers[role];
-
-    localStorage.setItem(
-      "campusEatsUser",
-      JSON.stringify(demoUser)
-    );
-
-    setUser(demoUser);
-
-    return demoUser;
+  const login = ({ role, email, name, register, cafeId, secretCode, password }) => {
+    let nextUser;
+    if (role === "student") {
+      const students = readStoredValue("campusEatsStudentsV2", {});
+      nextUser = studentAccount({ email, name, register }, students);
+      if (register) {
+        students[nextUser.email] = nextUser;
+        localStorage.setItem("campusEatsStudentsV2", JSON.stringify(students));
+      }
+    } else if (role === "canteen") {
+      nextUser = canteenMember({ email, cafeId, secretCode }, cafes, canteenAccessCodes);
+    } else if (role === "admin") {
+      if (email.trim().toLowerCase() !== "admin@campuseats.com" || password !== "admin123") {
+        throw new Error("Incorrect admin email or password.");
+      }
+      nextUser = { role, email: "admin@campuseats.com", name: "CampusEats Admin" };
+    } else {
+      throw new Error("Choose a valid account role.");
+    }
+    setUser(nextUser);
+    return nextUser;
   };
 
-  const logout = () => {
-    localStorage.removeItem("campusEatsUser");
-    setUser(null);
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, login, logout: () => setUser(null) }}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export function useAuth() { return useContext(AuthContext); }

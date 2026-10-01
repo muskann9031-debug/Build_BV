@@ -1,4 +1,4 @@
-import { User, Mail, GraduationCap } from "lucide-react";
+import { User, Mail } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Profile() {
@@ -16,7 +16,7 @@ export default function Profile() {
         <div className="bg-white rounded-2xl shadow-card p-8 mt-8">
 
           <div className="w-24 h-24 rounded-full bg-[#d9f4ec] text-[#075d50] flex items-center justify-center text-3xl font-black">
-            TV
+            {user?.name?.split(" ").map((part) => part[0]).slice(0, 2).join("")}
           </div>
 
           <h2 className="text-2xl font-black mt-5">
@@ -32,15 +32,15 @@ export default function Profile() {
             />
 
             <Info
-              icon={<GraduationCap />}
-              label="Course"
-              value={user?.course}
+              icon={<User />}
+              label="Campus"
+              value="Banasthali Vidyapith"
             />
 
             <Info
               icon={<User />}
-              label="Year"
-              value={user?.year}
+              label="Role"
+              value="Student"
             />
 
           </div>

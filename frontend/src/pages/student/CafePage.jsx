@@ -2,13 +2,13 @@ import { ArrowLeft, Search, ShoppingCart } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useState } from "react";
 
-import { cafes, foods } from "../../data/mockData";
 import { useOrders } from "../../context/OrderContext";
 
 export default function CafePage() {
   const { cafeId } = useParams();
 
-  const { cart, addToCart } = useOrders();
+  const { cart, cafes, foods, addToCart, isFoodAvailable } = useOrders();
+  const [search, setSearch] = useState("");
 
   const [category, setCategory] =
     useState("All");
@@ -17,9 +17,7 @@ export default function CafePage() {
     (c) => c.id === cafeId
   );
 
-  const cafeFoods = foods.filter(
-    (food) => food.cafeId === cafeId
-  );
+  const cafeFoods = foods.filter((food) => food.cafeId === cafeId && food.name.toLowerCase().includes(search.trim().toLowerCase()));
 
   const filteredFoods =
     category === "All"
@@ -103,6 +101,9 @@ export default function CafePage() {
           />
 
           <input
+            aria-label="Search menu"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
             placeholder="Search menu..."
             className="w-full bg-white border border-gray-200 rounded-xl py-3 pl-11 pr-4 outline-none"
           />
@@ -169,12 +170,13 @@ export default function CafePage() {
                   </span>
 
                   <button
+                    disabled={!isFoodAvailable(food)}
                     onClick={() =>
                       addToCart(food)
                     }
                     className="bg-[#0f8f73] text-white px-4 py-2 rounded-xl font-bold"
                   >
-                    Add to Cart
+                    {isFoodAvailable(food) ? "Add to Cart" : "Unavailable"}
                   </button>
 
                 </div>
