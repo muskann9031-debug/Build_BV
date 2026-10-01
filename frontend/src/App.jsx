@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter,
   Navigate,
@@ -7,7 +8,8 @@ import {
 
 import { AuthProvider } from "./context/AuthContext";
 import { OrderProvider } from "./context/OrderContext";
-
+import CanteenDashboard from "./pages/canteen/CanteenDashboard.jsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import Login from "./pages/Login";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import CafePage from "./pages/student/CafePage";
@@ -144,14 +146,11 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
-            {/* CANTEEN */}
-
             <Route
-              path="/canteen/*"
+              path="/canteen"
               element={
                 <ProtectedRoute role="canteen">
-                  <CanteenPlaceholder />
+                  <CanteenDashboard />
                 </ProtectedRoute>
               }
             />
@@ -162,7 +161,7 @@ function App() {
               path="/admin/*"
               element={
                 <ProtectedRoute role="admin">
-                  <AdminPlaceholder />
+                  <AdminDashboard />
                 </ProtectedRoute>
               }
             />
@@ -184,36 +183,5 @@ function App() {
   );
 }
 
-function CanteenPlaceholder() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold">
-          Canteen Dashboard
-        </h1>
-
-        <p className="mt-3 text-gray-500">
-          We'll build this next.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function AdminPlaceholder() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold">
-          Admin Dashboard
-        </h1>
-
-        <p className="mt-3 text-gray-500">
-          We'll build this after the canteen dashboard.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export default App;
